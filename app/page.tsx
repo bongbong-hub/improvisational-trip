@@ -2,21 +2,32 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import DartMap from "@/components/DartMap";
+import { Home } from "@/components/Home";
+import KoreaMap from "@/components/KoreaMap";
+import { Menu, type Panel } from "@/components/Menu";
 import { MissionCard, Recommendations } from "@/components/Mission";
-import { AccommodationStep, Onboarding } from "@/components/Setup";
+import { Onboarding } from "@/components/Setup";
 import { Summary } from "@/components/Summary";
 import { SEOUL_WEST_BBOX } from "@/lib/config.ts";
 import { randomPointInBbox, type Point } from "@/lib/domain/geo.ts";
 import type { Recommendation } from "@/lib/domain/recommend.ts";
-import { newMission, newSession, type Mission, type TripSession } from "@/lib/domain/session.ts";
+import {
+  PREVIOUS_PHASE,
+  newMission,
+  newSession,
+  type Accommodation,
+  type Mission,
+  type TripSession,
+} from "@/lib/domain/session.ts";
 import { scoreRegions, type Region } from "@/lib/domain/scoring.ts";
-import { clearTrip, loadTrip, saveTrip, type StoredTrip } from "@/lib/storage/session-store.ts";
-
-const MAP_CENTER: Point = {
-  lat: (SEOUL_WEST_BBOX.minLat + SEOUL_WEST_BBOX.maxLat) / 2,
-  lng: (SEOUL_WEST_BBOX.minLng + SEOUL_WEST_BBOX.maxLng) / 2,
-};
+import {
+  archiveTrip,
+  loadHistory,
+  loadTrip,
+  saveHistory,
+  saveTrip,
+  type StoredTrip,
+} from "@/lib/storage/session-store.ts";
 
 const freshTrip = (): StoredTrip => ({
   session: newSession(),
@@ -24,14 +35,20 @@ const freshTrip = (): StoredTrip => ({
   phase: "onboarding",
 });
 
-export default function Home() {
+export default function App() {
   const [trip, setTrip] = useState<StoredTrip | null>(null);
+  const [history, setHistory] = useState<StoredTrip[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  /** 홈은 phase 가 아니라 별도 상태다. 홈에 들렀다 와도 하던 화면이 그대로 남는다 */
+  const [atHome, setAtHome] = useState(true);
+  const [panel, setPanel] = useState<Panel | null>(null);
 
-  // 다트 결과는 세션에 저장하지 않는다 — 지역 후보 전체를 들고 있는 것은 슬라이더 재정렬용
-  // 임시 상태일 뿐이라 새로고침하면 다시 던지면 된다
+  /** 지역을 다트로 뽑을지 직접 고를지 */
+  const [mode, setMode] = useState<"dart" | "manual">("dart");
   const [regions, setRegions] = useState<Region[]>([]);
   const [sensitivity, setSensitivity] = useState(0.5);
   const [picked, setPicked] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,23 +58,23 @@ export default function Home() {
 
   // localStorage 는 서버 렌더에 없으므로 마운트 후에 읽는 것 말고는 방법이 없다.
   // react-hooks/set-state-in-effect 는 이 경우까지 막아서 여기서만 끈다.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setTrip(loadTrip() ?? freshTrip()), []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTrip(loadTrip());
+    setHistory(loadHistory());
+    setLoaded(true);
+  }, []);
 
-  const dart = trip?.session.dart_point ?? null;
+  const origin = trip?.session.dart_point ?? null;
 
   const candidates = useMemo(
-    () => (dart ? scoreRegions(dart, regions, sensitivity) : []),
-    [dart, regions, sensitivity],
+    () => (origin ? scoreRegions(origin, regions, sensitivity) : []),
+    [origin, regions, sensitivity],
   );
 
-  if (!trip) return null;
+  if (!loaded) return null;
 
-  /**
-   * 쓰기는 phase 전이 시점에만 일어난다 (SDD 6장).
-   * base 를 명시로 받는 이유는 한 핸들러에서 두 번 전이할 때다 — 렌더 클로저의 trip 을 그대로
-   * 쓰면 두 번째 전이가 첫 번째 전이를 되돌린다.
-   */
+  /** 쓰기는 phase 전이 시점에만 일어난다 (SDD 6장). 이어서 쓸 수 있게 갱신된 값을 돌려준다 */
   function apply(
     base: StoredTrip,
     patch: Partial<StoredTrip>,
@@ -113,13 +130,13 @@ export default function Home() {
     }
   }
 
-  async function throwDart() {
-    const point = randomPointInBbox(SEOUL_WEST_BBOX);
+  /** 다트로 뽑든 직접 찍든 여기서 만나 지역 후보를 가져온다 */
+  async function loadRegions(point: Point) {
     setRegions([]);
     setPicked(null);
     setError(null);
     setLoading(true);
-    const thrown = commit({ phase: "dart" }, { dart_point: point, selected_region: null });
+    const started = commit({ phase: "dart" }, { dart_point: point, selected_region: null });
     try {
       const res = await fetch("/api/regions", {
         method: "POST",
@@ -129,7 +146,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "지역을 불러오지 못했습니다.");
       setRegions(data.regions);
-      apply(thrown, { phase: "region_select" });
+      apply(started, { phase: "region_select" });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -137,20 +154,136 @@ export default function Home() {
     }
   }
 
-  if (trip.phase === "onboarding") {
+  async function searchRegion() {
+    if (!query.trim()) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/geocode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "검색에 실패했습니다.");
+      const place = data.places[0];
+      if (!place) throw new Error("그 이름으로는 찾지 못했습니다.");
+      await loadRegions({ lat: place.lat, lng: place.lng });
+    } catch (e) {
+      setError((e as Error).message);
+      setLoading(false);
+    }
+  }
+
+  /** 진행 중 여행과 지난 여행에서 접어둔 곳을 한 목록으로 본다 */
+  const wishlist = [...(trip?.missions ?? []), ...history.flatMap((t) => t.missions)].filter(
+    (m) => m.status === "스킵됨",
+  );
+
+  function removeWish(missionId: string) {
+    if (trip?.missions.some((m) => m.mission_id === missionId)) {
+      commit({ missions: trip.missions.filter((m) => m.mission_id !== missionId) });
+      return;
+    }
+    const next = history.map((t) => ({
+      ...t,
+      missions: t.missions.filter((m) => m.mission_id !== missionId),
+    }));
+    saveHistory(next);
+    setHistory(next);
+  }
+
+  function setAccommodation(accommodation: Accommodation) {
+    commit({}, { accommodation });
+  }
+
+  const menu = (
+    <Menu
+      accommodation={trip?.session.accommodation ?? null}
+      wishlist={wishlist}
+      onSetAccommodation={setAccommodation}
+      onRemoveWish={removeWish}
+      onHome={() => {
+        setPanel(null);
+        setAtHome(true);
+      }}
+      panel={panel}
+      setPanel={setPanel}
+    />
+  );
+
+  if (atHome || !trip) {
     return (
       <main className="page">
-        <Onboarding onDone={(preferences) => commit({ phase: "accommodation" }, { preferences })} />
+        {panel && menu}
+        <Home
+          history={history}
+          active={trip}
+          wishCount={wishlist.length}
+          onStart={() => {
+            const started = freshTrip();
+            saveTrip(started);
+            setTrip(started);
+            setRegions([]);
+            setRecs([]);
+            setPicked(null);
+            setAtHome(false);
+          }}
+          onResume={() => setAtHome(false)}
+          onOpenWishlist={() => setPanel("wishlist")}
+        />
       </main>
     );
   }
 
-  if (trip.phase === "accommodation") {
+  /** 뒤로가기는 화면마다 한 단계다. 갈 곳이 없으면 버튼을 숨긴다 */
+  function goBack() {
+    const target = PREVIOUS_PHASE[trip!.phase];
+    if (!target) return;
+    if (target === "home") {
+      setAtHome(true);
+      return;
+    }
+    if (target === "recommending") {
+      // 미션을 물렸으니 그 미션은 없던 일이 된다. 위시리스트에도 남기지 않는다
+      const active = trip!.missions.find((m) => m.status === "진행중");
+      const next = commit({
+        phase: "recommending",
+        missions: trip!.missions.filter((m) => m.mission_id !== active?.mission_id),
+      });
+      if (recs.length === 0) fetchRecs(next);
+      return;
+    }
+    if (target === "dart") {
+      setRegions([]);
+      setPicked(null);
+    }
+    commit({ phase: target });
+  }
+
+  const backable =
+    PREVIOUS_PHASE[trip.phase] !== undefined &&
+    // 여행이 시작된 뒤에는 지역을 되돌릴 수 없다
+    !(trip.phase === "recommending" && trip.missions.length > 0);
+
+  const bar = (
+    <div className="topbar">
+      {backable ? (
+        <button className="back" onClick={goBack}>
+          ← 뒤로
+        </button>
+      ) : (
+        <span />
+      )}
+      {menu}
+    </div>
+  );
+
+  if (trip.phase === "onboarding") {
     return (
       <main className="page">
-        <AccommodationStep
-          onDone={(accommodation) => commit({ phase: "dart" }, { accommodation })}
-        />
+        {bar}
+        <Onboarding onDone={(preferences) => commit({ phase: "dart" }, { preferences })} />
       </main>
     );
   }
@@ -158,14 +291,16 @@ export default function Home() {
   if (trip.phase === "summary") {
     return (
       <main className="page">
+        {bar}
         <Summary
           missions={trip.missions}
           onRestart={() => {
-            clearTrip();
+            setHistory(archiveTrip(trip));
+            setTrip(null);
             setRegions([]);
             setPicked(null);
             setRecs([]);
-            setTrip(freshTrip());
+            setAtHome(true);
           }}
         />
       </main>
@@ -188,6 +323,7 @@ export default function Home() {
 
     return (
       <main className="page">
+        {bar}
         <MissionCard
           mission={active}
           onVerified={(photo, verified_by) =>
@@ -207,6 +343,7 @@ export default function Home() {
   if (trip.phase === "recommending") {
     return (
       <main className="page">
+        {bar}
         <Recommendations
           regionName={trip.session.selected_region?.name ?? ""}
           places={recs}
@@ -235,14 +372,55 @@ export default function Home() {
 
   return (
     <main className="page">
-      <DartMap center={MAP_CENTER} dart={dart} candidates={candidates} selectedName={picked} />
+      {bar}
+      <KoreaMap
+        point={origin}
+        animateDrop={mode === "dart"}
+        showTarget={mode === "dart"}
+        candidates={candidates}
+        selectedName={picked}
+        onPickPoint={mode === "manual" && !loading ? loadRegions : undefined}
+      />
 
       <section className="panel">
-        {!dart && (
-          <>
-            <h1 className="title">어디로 갈지는 다트가 정한다</h1>
-            <p className="sub">서울 서부 어딘가에 다트를 던져 여행할 지역을 뽑습니다.</p>
-          </>
+        <div className="tabs">
+          {(["dart", "manual"] as const).map((m) => (
+            <button
+              key={m}
+              className={`tab${mode === m ? " tabOn" : ""}`}
+              onClick={() => setMode(m)}
+            >
+              {m === "dart" ? "다트 던지기" : "직접 고르기"}
+            </button>
+          ))}
+        </div>
+
+        {mode === "manual" && (
+          <form
+            className="searchRow"
+            onSubmit={(e) => {
+              e.preventDefault();
+              searchRegion();
+            }}
+          >
+            <input
+              className="input"
+              placeholder="지역 이름으로 찾기"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <button className="secondary" type="submit" disabled={loading}>
+              찾기
+            </button>
+          </form>
+        )}
+
+        {!origin && (
+          <p className="sub">
+            {mode === "dart"
+              ? "서울 서부 어딘가에 다트를 던져 여행할 지역을 뽑습니다."
+              : "지도를 눌러 찍거나 지역 이름으로 찾으세요."}
+          </p>
         )}
 
         {error && <p className="error">{error}</p>}
@@ -271,8 +449,7 @@ export default function Home() {
                   >
                     <strong>{candidate.name}</strong>
                     <span className="meta">
-                      볼거리 {candidate.poiCount}곳 · 다트에서{" "}
-                      {(candidate.distanceM / 1000).toFixed(1)}km
+                      볼거리 {candidate.poiCount}곳 · {(candidate.distanceM / 1000).toFixed(1)}km
                     </span>
                   </button>
                 </li>
@@ -296,9 +473,15 @@ export default function Home() {
             {chosen.name}에서 여행 시작
           </button>
         ) : (
-          <button className="primary" onClick={throwDart} disabled={loading}>
-            {dart ? "다시 던지기" : "다트 던지기"}
-          </button>
+          mode === "dart" && (
+            <button
+              className="primary"
+              onClick={() => loadRegions(randomPointInBbox(SEOUL_WEST_BBOX))}
+              disabled={loading}
+            >
+              {origin ? "다시 던지기" : "다트 던지기"}
+            </button>
+          )
         )}
       </section>
     </main>

@@ -1,4 +1,4 @@
-# SDD — 지오펜싱 순차 여행 미션 앱 (데모)
+# SDD — GMG(가면가) 데모
 
 PRD 는 무엇을·왜, CLAUDE.md 는 작업 규칙, 이 문서는 **어떻게**만 다룬다. 중복되는 내용은 여기 없다.
 
@@ -6,7 +6,7 @@ PRD 는 무엇을·왜, CLAUDE.md 는 작업 규칙, 이 문서는 **어떻게**
 
 ```
 app/
-  page.tsx                 단일 페이지. phase 로 화면 전환
+  page.tsx                 단일 페이지. 홈과 phase 로 화면 전환
   api/regions/route.ts     다트 좌표 → 지역 후보
   api/recommend/route.ts   추천 엔진. 첫 추천·다음 추천·스킵이 모두 이 하나
   api/geocode/route.ts     숙소 주소·상호 → 좌표
@@ -14,7 +14,8 @@ lib/
   domain/                  순수 함수. 네트워크·브라우저 API 의존 없음
     scoring.ts             POI 밀도 × 거리가중치
     geo.ts                 haversine, 인증 거리 판정
-    session.ts             TripSession·Mission 타입과 생성자, phase 정의
+    session.ts             TripSession·Mission 타입과 생성자, phase 와 뒤로가기 표
+    korea.ts               남한 외곽선 좌표와 위경도↔SVG 투영
     recommend.ts           프롬프트 구성, LLM 응답 검증, 폴백
   clients/
     kakao.ts               Local REST 래퍼
@@ -24,9 +25,11 @@ lib/
     photo-store.ts         IndexedDB
   config.ts                튜닝 상수 전부
 components/
-  DartMap.tsx              Kakao 지도, 다트 낙하, 후보 마커
-  Setup.tsx                취향 설문, 숙소 입력
-  Mission.tsx              추천 카드, 미션 인증·스킵
+  Home.tsx                 GMG 홈. 지난 여행, 위시리스트 진입
+  KoreaMap.tsx             남한 SVG, 다트 낙하, 직접 고르기 클릭
+  Menu.tsx                 햄버거. 위시리스트, 숙소 등록
+  Setup.tsx                취향 설문, 숙소 검색
+  Mission.tsx              추천 카드, 미션 인증·위시리스트 담기
   Summary.tsx              기록 타임라인, 캡션 오버레이 저장
 ```
 
@@ -35,19 +38,19 @@ components/
 - `domain` 은 `config.ts` 말고는 아무것도 import 하지 않는다. 여기만 단위 검증이 쉬워야 한다.
 - `clients` 는 서버에서만 import 한다. `components` 가 import 하면 REST 키가 번들에 실린다.
 - `components` → `storage` · `domain` 만 허용.
-- Kakao 키는 두 개다. JS SDK 키는 클라이언트(도메인 제한 걸어둠), REST 키는 서버 전용 환경변수.
+- Kakao 는 REST 키 하나만 쓴다. 지도는 외부 SDK 가 아니라 `korea.ts` 의 좌표로 직접 그린다 — 사용자가 확대·이동할 수 없어야 다트와 과녁이 성립한다.
 
 ## 2. phase 상태 머신
 
 ```
-onboarding → accommodation → dart → region_select
+home → onboarding → dart → region_select
   → recommending → mission_active
        ├ 인증 성공 → recommending
-       ├ 스킵      → recommending
-       └ 여행 종료 → summary
+       ├ 위시리스트 담기 → recommending
+       └ 여행 종료 → summary → (기록으로 옮기고) home
 ```
 
-`accommodation` 은 건너뛰기 가능, 나머지는 순서 고정. phase 는 `TripSession.status` 와 별개다 — status 는 진행중/종료 둘뿐이고, phase 는 화면 위치다.
+홈은 phase 가 아니라 별도 상태다 — 언제든 들렀다 하던 화면으로 돌아온다. 뒤로가기는 `PREVIOUS_PHASE` 한 단계씩이고, 여행이 시작된 뒤에는 지역을 되돌릴 수 없다. 숙소는 순서에서 빠지고 메뉴에서 아무 때나 등록한다 — 등록 시점부터 추천에 반영된다. phase 는 `TripSession.status` 와 별개다 — status 는 진행중/종료 둘뿐이고, phase 는 화면 위치다.
 
 ## 3. API 계약
 
@@ -98,11 +101,11 @@ POST /api/geocode
 | Kakao API | 즉시 실패 노출. 후보가 없으면 추천 자체가 성립하지 않는다 |
 | LLM 호출·타임아웃(`config.LLM_TIMEOUT_MS`) | 거리순 상위 2개로 폴백, reason 은 템플릿 문장. 여행 루프가 끊기면 안 된다 |
 | LLM 응답이 후보에 없는 id 반환 | 폐기 후 위와 같은 폴백. 재시도하지 않는다 |
-| 지도 SDK 로드 실패 | 실패 노출. 대체 UI 없음 |
 
 ## 6. 저장
 
-- localStorage 키는 `trip:session` **하나**. `{ session, missions, phase }` 봉투에 담아 통째 저장한다 — `session`·`missions` 는 PRD 필드명 그대로라 서버 DB 로 옮길 때 떼어내면 된다.
+- localStorage 키는 둘이다. `trip:session` 은 진행 중인 여행 하나, `trip:history` 는 끝난 여행 배열. 둘 다 `{ session, missions, phase }` 봉투에 담는다 — `session`·`missions` 는 PRD 필드명 그대로라 서버 DB 로 옮길 때 떼어내면 된다.
+- 위시리스트는 별도 저장소가 아니다. 진행 중 여행과 지난 여행에서 `status` 가 `스킵됨` 인 Mission 을 모아 보여준다.
 - 쓰기는 **phase 전이 시점에만**. 설문 항목을 고를 때마다 쓰지 않는다.
 - 사진 원본은 IndexedDB `trip` / store `photos`, key 는 `mission_id`, value 는 Blob.
 - `Mission.photo` 에는 Blob 이 아니라 그 IndexedDB 키를 넣는다. 세션 JSON 이 커지면 localStorage 한도에 먼저 걸린다.

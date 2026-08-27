@@ -11,8 +11,8 @@ const FONTS =
   "&family=IBM+Plex+Mono:wght@400;500&display=swap";
 
 export const metadata: Metadata = {
-  title: "다트 트립",
-  description: "다트로 지역을 정하고 한 곳씩 열어가는 여행 미션 앱",
+  title: "GMG 가면가",
+  description: "다트가 정한 곳으로. 한 번에 한 곳씩 열리는 여행",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

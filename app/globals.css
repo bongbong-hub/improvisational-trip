@@ -74,74 +74,79 @@ button {
 
 .mapWrap {
   position: relative;
-  flex: 1;
-  min-height: 42vh;
-  /* 지도가 뜨기 전에는 과녁의 동심원이 자리를 지킨다 */
+  /* SVG 에 height:100% 를 주려면 부모 높이가 확정돼야 한다. flex:1 로 두면
+     세로로 긴 지도가 자기 크기만큼 늘어나 아래 패널을 화면 밖으로 밀어낸다 */
+  height: 38vh;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0;
   background-color: var(--surface);
-  background-image: repeating-radial-gradient(
-    circle at 50% 50%,
-    transparent 0 30px,
-    rgba(237, 227, 206, 0.055) 30px 31px
-  );
 }
 
-.map {
-  position: absolute;
-  inset: 0;
+.korea {
+  height: 100%;
 }
 
-.mapMsg {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1.5rem;
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.84rem;
+.koreaPickable {
+  cursor: crosshair;
+}
+
+.landmass {
+  fill: var(--surface-lift);
+  stroke: rgba(237, 227, 206, 0.28);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+/* 서울 서부는 지도 전체에서 손톱만 하다. 조준 링이 있어야 어디로 던지는지 보인다 */
+.aim circle {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 0.8;
+  opacity: 0.45;
+}
+
+.aimBox {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1.2;
+}
+
+.aimLabel {
+  fill: var(--brass);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.spot {
+  fill: var(--ivory);
+  opacity: 0.55;
+}
+
+.spotOn {
+  fill: var(--wine-lift);
+  opacity: 1;
 }
 
 /* ── 다트 ────────────────────────────────────── */
 
-/* 촉이 좌표에 닿도록 원점을 아래 끝에 둔다. 지도를 먼저 옮기므로 좌표는 항상 화면 중앙이다 */
+/* 원점을 도형 아래 끝(촉)에 둬야 꽂힌 자리를 축으로 흔들린다 */
 .dart {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  transform-origin: bottom center;
-  pointer-events: none;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  transform-box: fill-box;
+  transform-origin: center bottom;
 }
 
 .dartShaft {
-  position: absolute;
-  left: -1.5px;
-  bottom: 0;
-  width: 3px;
-  height: 42px;
-  background: linear-gradient(var(--brass), #7e6415);
+  fill: var(--brass);
 }
 
 .dartTip {
-  position: absolute;
-  left: -3px;
-  bottom: -7px;
-  width: 6px;
-  height: 9px;
-  background: var(--ivory);
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  fill: var(--ivory);
 }
 
 .dartFlight {
-  position: absolute;
-  left: -10px;
-  bottom: 30px;
-  width: 20px;
-  height: 18px;
-  background: var(--wine);
-  clip-path: polygon(50% 100%, 0 0, 50% 34%, 100% 0);
+  fill: var(--wine);
 }
 
 .dartDropping {
@@ -151,7 +156,7 @@ button {
 /* 꽂힌 뒤 진동이 잦아드는 것까지가 한 동작이다 */
 @keyframes dartDrop {
   0% {
-    transform: translateY(-70vh) rotate(-14deg);
+    transform: translateY(-420px) rotate(-14deg);
   }
   62% {
     transform: translateY(0) rotate(0deg);
@@ -203,8 +208,6 @@ button {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 500;
-  /* 한글은 자간을 벌리면 낱자로 흩어진다. 숫자가 붙는 만큼만 준다 */
-  letter-spacing: 0.05em;
   color: var(--brass);
 }
 
@@ -457,4 +460,220 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── 상단바 ──────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.back {
+  padding: 0.4rem 0.6rem 0.4rem 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+.back:hover {
+  color: var(--ivory);
+}
+
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+}
+
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--ivory);
+}
+
+/* ── 메뉴 시트 ───────────────────────────────── */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  max-width: var(--shell);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0.6rem 1.15rem 1.5rem;
+  overflow-y: auto;
+  background: var(--board);
+}
+
+.sheetBar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sheetBack {
+  padding: 0.5rem 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+.menuList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.menuItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 0.95rem;
+  text-align: left;
+  background: var(--surface);
+  border: none;
+  border-left: 2px solid transparent;
+}
+
+.menuItem:hover {
+  background: var(--surface-lift);
+  border-left-color: var(--brass);
+}
+
+.wishRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 0.95rem;
+  background: var(--surface);
+  border-left: 2px solid var(--hairline);
+}
+
+.wishText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* ── 탭 ──────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 1.1rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.tab {
+  padding: 0 0 0.6rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tabOn {
+  color: var(--ivory);
+  font-weight: 600;
+  border-bottom-color: var(--wine);
+}
+
+/* ── 홈 ──────────────────────────────────────── */
+
+.home {
+  gap: 1.1rem;
+}
+
+.brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.4rem 0 1.2rem;
+}
+
+/* 워드마크 뒤에 남한을 옅게 깔아둔다. 로고와 지도가 같은 그림이다 */
+.brandMark {
+  height: 78px;
+  margin-bottom: 0.9rem;
+}
+
+.brandMark path {
+  fill: rgba(201, 162, 39, 0.1);
+  stroke: var(--brass);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.brandPin {
+  fill: var(--wine);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 3.6rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--ivory);
+}
+
+.wordmarkSub {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--brass);
+}
+
+.pitch {
+  text-align: center;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.trips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.6rem;
+}
+
+/* 지난 여행은 읽는 것이지 누르는 것이 아니다 */
+.cardStatic {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 0.95rem;
+  background: var(--surface);
+  border-left: 2px solid var(--hairline);
+}
+
+.fineprint {
+  padding-top: 1rem;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.pin path {
+  fill: var(--wine);
+}
+
+.pin circle {
+  fill: var(--board);
 }

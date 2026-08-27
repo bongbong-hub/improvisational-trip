@@ -91,7 +91,8 @@ export function Onboarding({ onDone }: { onDone: (preferences: Preferences) => v
 
 type Place = { name: string; address: string; lat: number; lng: number };
 
-export function AccommodationStep({ onDone }: { onDone: (place: Accommodation | null) => void }) {
+/** 온보딩에서 빠지고 메뉴 안으로 들어왔다. 여행 도중 아무 때나 등록할 수 있다 */
+export function AccommodationSearch({ onDone }: { onDone: (place: Accommodation) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
@@ -119,9 +120,8 @@ export function AccommodationStep({ onDone }: { onDone: (place: Accommodation | 
   }
 
   return (
-    <section className="panel panelFull">
-      <h1 className="title">숙소가 정해져 있나요?</h1>
-      <p className="sub">알려주면 숙소 방향의 장소도 추천에 섞습니다. 없어도 진행됩니다.</p>
+    <>
+      <p className="sub">등록한 뒤부터 숙소 방향의 장소가 추천에 섞입니다.</p>
 
       <form
         className="searchRow"
@@ -158,10 +158,6 @@ export function AccommodationStep({ onDone }: { onDone: (place: Accommodation | 
           </li>
         ))}
       </ul>
-
-      <button className="secondary away" onClick={() => onDone(null)}>
-        숙소 없이 진행할게요
-      </button>
-    </section>
+    </>
   );
 }

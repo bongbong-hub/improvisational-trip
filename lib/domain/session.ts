@@ -42,13 +42,25 @@ export type Mission = {
 
 /** 화면 위치. TripSession.status(진행중/종료)와는 별개다 (SDD 2장) */
 export type Phase =
+  | "home"
   | "onboarding"
-  | "accommodation"
   | "dart"
   | "region_select"
   | "recommending"
   | "mission_active"
   | "summary";
+
+/**
+ * 뒤로가기가 갈 곳. 없는 화면에서는 버튼을 숨긴다.
+ * region_select 에서 dart 로 가면 던진 결과가 지워지므로 다시 던지거나 직접 고르면 된다.
+ */
+export const PREVIOUS_PHASE: Partial<Record<Phase, Phase>> = {
+  onboarding: "home",
+  dart: "onboarding",
+  region_select: "dart",
+  recommending: "region_select",
+  mission_active: "recommending",
+};
 
 export const DEFAULT_PREFERENCES: Preferences = {
   tempo: "보통",

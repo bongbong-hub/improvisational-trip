@@ -170,7 +170,7 @@ export function MissionCard({ mission, onVerified, onSkip }: MissionCardProps) {
       )}
 
       <button className="secondary away" onClick={onSkip} disabled={checking}>
-        여기 갈 수 없어요
+        못 가요, 위시리스트에 담기
       </button>
     </section>
   );
