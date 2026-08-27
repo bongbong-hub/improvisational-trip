@@ -270,7 +270,7 @@ export default function Home() {
                     onClick={() => setPicked(candidate.name)}
                   >
                     <strong>{candidate.name}</strong>
-                    <span>
+                    <span className="meta">
                       볼거리 {candidate.poiCount}곳 · 다트에서{" "}
                       {(candidate.distanceM / 1000).toFixed(1)}km
                     </span>

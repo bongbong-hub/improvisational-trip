@@ -52,7 +52,7 @@ export function Recommendations({
           <li key={place.id}>
             <button className="card" onClick={() => onPick(place)}>
               <strong>{place.name}</strong>
-              <span>
+              <span className="meta">
                 {place.category} · {place.distanceM ?? "?"}m · 걸어서 {place.etaMin}분
               </span>
               <span className="reason">{place.reason}</span>
@@ -62,7 +62,7 @@ export function Recommendations({
       </ul>
 
       {!loading && (
-        <button className="secondary" onClick={onFinish}>
+        <button className="secondary away" onClick={onFinish}>
           여행 종료
         </button>
       )}
@@ -129,7 +129,8 @@ export function MissionCard({ mission, onVerified, onSkip }: MissionCardProps) {
 
   return (
     <section className="panel panelFull">
-      <p className="sub">지금 미션</p>
+      {/* 번호는 장식이 아니라 실제 순서다 — 몇 번째로 연 장소인지 */}
+      <p className="eyebrow">미션 {String(mission.order_index + 1).padStart(2, "0")}</p>
       <h1 className="title">{mission.place_name}</h1>
       <p className="reason">{mission.recommend_reason}</p>
 
@@ -168,7 +169,7 @@ export function MissionCard({ mission, onVerified, onSkip }: MissionCardProps) {
         </>
       )}
 
-      <button className="secondary" onClick={onSkip} disabled={checking}>
+      <button className="secondary away" onClick={onSkip} disabled={checking}>
         여기 갈 수 없어요
       </button>
     </section>

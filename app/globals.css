@@ -1,66 +1,88 @@
+/*
+ * 팔레트는 다트보드에서 가져왔다 — 그린 웨지, 상아 넘버링, 더블링의 와인레드, 놋쇠 배럴.
+ * 밝은 테마를 두지 않는다. 이 앱은 보드 위에서만 성립한다.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  --board: #0d1f18;
+  --surface: #142c22;
+  --surface-lift: #1b3a2c;
+  --ivory: #ede3ce;
+  --muted: #8fa396;
+  --wine: #b4283a;
+  --wine-lift: #cf3348;
+  --brass: #c9a227;
+  --hairline: rgba(237, 227, 206, 0.12);
+
+  --shell: 460px;
+
+  /* 디스플레이는 굵은 한글 명조, 본문은 산세리프, 측정값은 등폭 */
+  --font-display: "Hahmlet", serif;
+  --font-body: "IBM Plex Sans KR", system-ui, sans-serif;
+  /* 등폭에는 한글이 없다. 숫자만 등폭으로 받고 한글은 본문 서체로 흘린다 */
+  --font-mono: "IBM Plex Mono", "IBM Plex Sans KR", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
   height: 100%;
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
 body {
   min-height: 100%;
   display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  justify-content: center;
+  color: var(--ivory);
+  background: var(--board);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
+button {
+  font: inherit;
   color: inherit;
-  text-decoration: none;
+  cursor: pointer;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
 }
 
-/* ── 앱 레이아웃 ─────────────────────────────── */
+/* ── 셸 ──────────────────────────────────────── */
 
+/* 모바일 세로가 기준이다. 데스크톱에서는 폭을 묶고 양옆에 헤어라인을 둬 한 화면으로 읽히게 한다 */
 .page {
-  flex: 1;
+  width: 100%;
+  max-width: var(--shell);
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  background: var(--board);
+  border-inline: 1px solid var(--hairline);
 }
+
+/* ── 지도 ────────────────────────────────────── */
 
 .mapWrap {
   position: relative;
   flex: 1;
-  min-height: 45vh;
-  background: #e8e8e8;
+  min-height: 42vh;
+  /* 지도가 뜨기 전에는 과녁의 동심원이 자리를 지킨다 */
+  background-color: var(--surface);
+  background-image: repeating-radial-gradient(
+    circle at 50% 50%,
+    transparent 0 30px,
+    rgba(237, 227, 206, 0.055) 30px 31px
+  );
 }
 
 .map {
@@ -73,68 +95,125 @@ a {
   inset: 0;
   display: grid;
   place-items: center;
-  color: #666;
-  font-size: 0.9rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.84rem;
 }
 
-/* 다트는 지도 정중앙에 꽂힌다 — 좌표를 픽셀로 투영하지 않으려고 지도를 먼저 옮긴다 */
+/* ── 다트 ────────────────────────────────────── */
+
+/* 촉이 좌표에 닿도록 원점을 아래 끝에 둔다. 지도를 먼저 옮기므로 좌표는 항상 화면 중앙이다 */
 .dart {
   position: absolute;
   top: 50%;
   left: 50%;
-  translate: -50% -100%;
-  font-size: 2rem;
+  width: 0;
+  height: 0;
+  transform-origin: bottom center;
   pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+.dartShaft {
+  position: absolute;
+  left: -1.5px;
+  bottom: 0;
+  width: 3px;
+  height: 42px;
+  background: linear-gradient(var(--brass), #7e6415);
+}
+
+.dartTip {
+  position: absolute;
+  left: -3px;
+  bottom: -7px;
+  width: 6px;
+  height: 9px;
+  background: var(--ivory);
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+}
+
+.dartFlight {
+  position: absolute;
+  left: -10px;
+  bottom: 30px;
+  width: 20px;
+  height: 18px;
+  background: var(--wine);
+  clip-path: polygon(50% 100%, 0 0, 50% 34%, 100% 0);
 }
 
 .dartDropping {
-  animation: drop 0.7s cubic-bezier(0.5, 0, 0.75, 0);
+  animation: dartDrop 0.7s cubic-bezier(0.45, 0, 0.3, 1);
 }
 
-@keyframes drop {
-  from {
-    translate: -50% -100%;
-    transform: translateY(-60vh) scale(1.6);
+/* 꽂힌 뒤 진동이 잦아드는 것까지가 한 동작이다 */
+@keyframes dartDrop {
+  0% {
+    transform: translateY(-70vh) rotate(-14deg);
   }
-  to {
-    translate: -50% -100%;
-    transform: translateY(0) scale(1);
+  62% {
+    transform: translateY(0) rotate(0deg);
+  }
+  74% {
+    transform: translateY(0) rotate(5deg);
+  }
+  86% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
   }
 }
+
+/* ── 패널 ────────────────────────────────────── */
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(128, 128, 128, 0.25);
+  gap: 0.9rem;
+  padding: 1.25rem 1.15rem calc(1.25rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hairline);
+  background: var(--board);
+}
+
+.panelFull {
+  flex: 1;
+  overflow-y: auto;
+  border-top: none;
 }
 
 .title {
-  font-size: 1.25rem;
+  font-family: var(--font-display);
+  /* 명조 획이 보이려면 굵기를 800 까지 올리지 않는 편이 낫다 */
+  font-weight: 700;
+  font-size: 1.85rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .sub {
-  font-size: 0.88rem;
-  opacity: 0.7;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+/* 위에 붙는 짧은 표식. 순서·상태처럼 실제 정보만 담는다 */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  /* 한글은 자간을 벌리면 낱자로 흩어진다. 숫자가 붙는 만큼만 준다 */
+  letter-spacing: 0.05em;
+  color: var(--brass);
 }
 
 .error {
-  font-size: 0.88rem;
-  color: #c0392b;
+  font-size: 0.86rem;
+  color: var(--wine-lift);
 }
 
-.slider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.82rem;
-  opacity: 0.8;
-}
-
-.slider input {
-  flex: 1;
-}
+/* ── 카드 ────────────────────────────────────── */
 
 .cards {
   display: flex;
@@ -143,64 +222,97 @@ a {
   list-style: none;
 }
 
+/* 왼쪽 규칙선이 선택 상태를 나타낸다. 라운드 박스를 채우는 것보다 조용하다 */
 .card {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.8rem 0.9rem;
+  gap: 0.25rem;
+  padding: 0.85rem 0.95rem;
   text-align: left;
-  font: inherit;
-  color: inherit;
-  background: rgba(128, 128, 128, 0.08);
-  border: 1px solid transparent;
-  border-radius: 12px;
-  cursor: pointer;
+  background: var(--surface);
+  border: none;
+  border-left: 2px solid var(--hairline);
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.card span {
-  font-size: 0.8rem;
-  opacity: 0.65;
+.card:hover {
+  background: var(--surface-lift);
+}
+
+.card strong {
+  font-weight: 600;
+  font-size: 1rem;
 }
 
 .cardOn {
-  border-color: currentColor;
-  background: rgba(128, 128, 128, 0.18);
+  background: var(--surface-lift);
+  border-left-color: var(--wine);
 }
 
+.meta {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.reason {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--ivory);
+  opacity: 0.82;
+}
+
+/* ── 버튼 ────────────────────────────────────── */
+
 .primary {
-  padding: 0.9rem;
-  font: inherit;
+  padding: 0.95rem;
   font-weight: 600;
-  color: var(--background);
-  background: var(--foreground);
+  color: var(--ivory);
+  background: var(--wine);
   border: none;
-  border-radius: 12px;
-  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--wine-lift);
 }
 
 .primary:disabled {
-  opacity: 0.5;
+  color: var(--muted);
+  background: var(--surface);
   cursor: default;
 }
 
-/* ── 설문·숙소 입력 ───────────────────────────── */
-
-.panelFull {
-  flex: 1;
-  overflow-y: auto;
-  border-top: none;
+.secondary {
+  padding: 0.8rem 1rem;
+  color: var(--ivory);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  transition: border-color 0.15s;
 }
+
+.secondary:hover {
+  border-color: var(--muted);
+}
+
+/* 빠져나가는 동작은 화면 바닥으로 내린다. 카드 바로 밑에 두면 선택지 하나로 읽힌다 */
+.away {
+  margin-top: auto;
+}
+
+/* ── 선택지 칩 ───────────────────────────────── */
 
 .choice {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.5rem;
 }
 
 .choiceLabel {
-  font-size: 0.82rem;
-  opacity: 0.65;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
 }
 
 .chips {
@@ -210,20 +322,62 @@ a {
 }
 
 .chip {
-  padding: 0.5rem 0.85rem;
-  font: inherit;
+  padding: 0.5rem 0.9rem;
   font-size: 0.9rem;
-  color: inherit;
-  background: rgba(128, 128, 128, 0.08);
-  border: 1px solid transparent;
+  background: transparent;
+  border: 1px solid var(--hairline);
   border-radius: 999px;
-  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--muted);
 }
 
 .chipOn {
-  color: var(--background);
-  background: var(--foreground);
+  /* 선택 표시는 놋쇠다. 와인은 실행 버튼 하나에만 남겨 액센트가 흩어지지 않게 한다 */
+  color: var(--board);
+  font-weight: 500;
+  background: var(--brass);
+  border-color: var(--brass);
 }
+
+/* ── 슬라이더 ────────────────────────────────── */
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.slider input {
+  flex: 1;
+  height: 2px;
+  appearance: none;
+  background: var(--hairline);
+  cursor: pointer;
+}
+
+.slider input::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brass);
+}
+
+.slider input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brass);
+}
+
+/* ── 숙소 검색 ───────────────────────────────── */
 
 .searchRow {
   display: flex;
@@ -232,66 +386,57 @@ a {
 
 .input {
   flex: 1;
-  padding: 0.75rem 0.9rem;
+  padding: 0.8rem 0.9rem;
   font: inherit;
-  color: inherit;
-  background: rgba(128, 128, 128, 0.08);
-  border: 1px solid rgba(128, 128, 128, 0.25);
-  border-radius: 10px;
+  color: var(--ivory);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
 }
 
-.secondary {
-  padding: 0.75rem 1rem;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: 1px solid rgba(128, 128, 128, 0.4);
-  border-radius: 10px;
-  cursor: pointer;
+.input::placeholder {
+  color: var(--muted);
 }
 
-.reason {
-  margin-top: 0.15rem;
-  line-height: 1.45;
+.input:focus {
+  outline: none;
+  border-color: var(--brass);
 }
 
-/* ── 기록 정리 ───────────────────────────────── */
+/* ── 기록 ────────────────────────────────────── */
 
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1.25rem;
   list-style: none;
 }
 
 .shot {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .shot img {
   width: 100%;
   /* 세로 사진이 화면을 통째로 먹으면 타임라인이 안 보인다 */
-  max-height: 60vh;
+  max-height: 58vh;
   object-fit: cover;
-  border-radius: 12px;
 }
 
 .shotEmpty {
   display: grid;
   place-items: center;
   aspect-ratio: 4 / 3;
-  font-size: 0.85rem;
-  opacity: 0.5;
-  background: rgba(128, 128, 128, 0.12);
-  border-radius: 12px;
+  font-size: 0.84rem;
+  color: var(--muted);
+  background: var(--surface);
 }
 
 .caption {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.15rem;
 }
 
 .caption span:first-child {
@@ -299,6 +444,17 @@ a {
 }
 
 .caption span + span {
-  font-size: 0.78rem;
-  opacity: 0.6;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

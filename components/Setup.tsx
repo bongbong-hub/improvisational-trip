@@ -159,7 +159,7 @@ export function AccommodationStep({ onDone }: { onDone: (place: Accommodation | 
         ))}
       </ul>
 
-      <button className="secondary" onClick={() => onDone(null)}>
+      <button className="secondary away" onClick={() => onDone(null)}>
         숙소 없이 진행할게요
       </button>
     </section>

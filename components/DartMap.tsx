@@ -84,7 +84,14 @@ export default function DartMap({ center, dart, candidates, selectedName }: Prop
       <div ref={containerRef} className="map" />
       {failed && <div className="mapMsg">지도를 불러오지 못했습니다. 새로고침해 주세요.</div>}
       {!ready && !failed && <div className="mapMsg">지도 불러오는 중…</div>}
-      {dart && <div className={`dart${dropping ? " dartDropping" : ""}`}>📍</div>}
+      {/* 지도가 없으면 다트가 가리킬 곳도 없다 — 실패 문구와 겹쳐 찍히지 않게 한다 */}
+      {dart && !failed && (
+        <div className={`dart${dropping ? " dartDropping" : ""}`} aria-hidden>
+          <span className="dartFlight" />
+          <span className="dartShaft" />
+          <span className="dartTip" />
+        </div>
+      )}
     </div>
   );
 }
