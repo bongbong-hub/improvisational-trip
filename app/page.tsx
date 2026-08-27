@@ -8,7 +8,7 @@ import { Menu, type Panel } from "@/components/Menu";
 import { MissionCard, Recommendations } from "@/components/Mission";
 import { Onboarding } from "@/components/Setup";
 import { Summary } from "@/components/Summary";
-import { SEOUL_WEST_BBOX } from "@/lib/config.ts";
+import { DEFAULT_SCOPE, REGION_SCOPES, SEOUL_WEST_BBOX, type RegionScope } from "@/lib/config.ts";
 import { randomPointInBbox, type Point } from "@/lib/domain/geo.ts";
 import type { Recommendation } from "@/lib/domain/recommend.ts";
 import {
@@ -45,6 +45,8 @@ export default function App() {
 
   /** 지역을 다트로 뽑을지 직접 고를지 */
   const [mode, setMode] = useState<"dart" | "manual">("dart");
+  /** 여행 범위 단위. 바꾸면 표본 반경이 달라져 지역 후보를 다시 받아야 한다 */
+  const [scope, setScope] = useState<RegionScope>(DEFAULT_SCOPE);
   const [regions, setRegions] = useState<Region[]>([]);
   const [sensitivity, setSensitivity] = useState(0.5);
   const [picked, setPicked] = useState<string | null>(null);
@@ -114,7 +116,8 @@ export default function App() {
         body: JSON.stringify({
           region,
           preferences: from.session.preferences,
-          current: last ? { lat: last.lat, lng: last.lng } : { lat: region.lat, lng: region.lng },
+          // 첫 추천은 지역 중심이 아니라 찍은 지점에서 시작한다 — 광역 단위의 중심은 산속일 수도 있다
+          current: last ?? from.session.dart_point ?? region,
           history: done.map((m) => ({ name: m.place_name, category: m.category })),
           accommodation: from.session.accommodation,
           exclude: from.missions.map((m) => m.place_id),
@@ -131,7 +134,7 @@ export default function App() {
   }
 
   /** 다트로 뽑든 직접 찍든 여기서 만나 지역 후보를 가져온다 */
-  async function loadRegions(point: Point) {
+  async function loadRegions(point: Point, nextScope: RegionScope = scope) {
     setRegions([]);
     setPicked(null);
     setError(null);
@@ -141,7 +144,7 @@ export default function App() {
       const res = await fetch("/api/regions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dart: point }),
+        body: JSON.stringify({ dart: point, scope: nextScope }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "지역을 불러오지 못했습니다.");
@@ -414,6 +417,26 @@ export default function App() {
             </button>
           </form>
         )}
+
+        <div className="choice">
+          <span className="choiceLabel">여행 범위</span>
+          <div className="chips">
+            {(Object.keys(REGION_SCOPES) as RegionScope[]).map((s) => (
+              <button
+                key={s}
+                className={`chip${scope === s ? " chipOn" : ""}`}
+                disabled={loading}
+                onClick={() => {
+                  setScope(s);
+                  // 이미 찍은 지점이 있으면 그 자리에서 범위만 바꿔 다시 뽑는다
+                  if (origin) loadRegions(origin, s);
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {!origin && (
           <p className="sub">

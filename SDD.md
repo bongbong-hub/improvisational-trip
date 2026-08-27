@@ -58,8 +58,8 @@ home → onboarding → dart → region_select
 
 ```
 POST /api/regions
-  { dart: {lat,lng} }
-→ { regions: [{ name, lat, lng, poiCount }] }              // 표본에서 나온 행정동 전체
+  { dart: {lat,lng}, scope?: "광역" | "기초" | "읍면동" }   // 기본값 기초
+→ { regions: [{ name, lat, lng, poiCount }] }              // 표본에서 나온 지역 전체
 
 POST /api/recommend
   { region, preferences, current: {lat,lng},
@@ -111,13 +111,19 @@ POST /api/geocode
 - `Mission.photo` 에는 Blob 이 아니라 그 IndexedDB 키를 넣는다. 세션 JSON 이 커지면 localStorage 한도에 먼저 걸린다.
 - 복원 시 세션 JSON 만 읽는다. 사진은 summary 화면에서 필요할 때 꺼낸다.
 
-## 7. 튜닝 상수 위치
+## 7. 아직 없는 것
+
+- **현재 위치 기준 거리** (PRD 4-7). Geolocation 권한과 HTTPS 실기기가 필요하고, 데스크톱의 IP 기반 위치는 오차가 수 km라 데모에서 값이 의미를 잃는다. 붙일 자리는 지역 후보 카드이고, 계산은 `domain/geo.ts` 의 `haversineM` 을 그대로 쓰면 된다 — 권한 요청과 거부 처리만 새로 필요하다.
+- **위시리스트에서 미션 되살리기.** 지금은 목록 보기와 삭제까지다.
+
+## 8. 튜닝 상수 위치
 
 전부 `lib/config.ts` 에 모은다. PRD 의 오픈 이슈가 여기로 내려온다.
 
 | 상수 | 관련 이슈 |
 |---|---|
-| `DART_SEARCH_RADIUS_M`, `DISTANCE_HALFLIFE_M`, `POI_CATEGORY_CODES`, `POI_COUNT_RADIUS_M` | O1 (밀도×거리 산식) |
+| `DISTANCE_HALFLIFE_M`, `POI_CATEGORY_CODES` | O1 (밀도×거리 산식) |
+| `REGION_SCOPES` (단위별 표본·POI 반경) | O6 (범위 단위) |
 | `VERIFY_THRESHOLD_M` | O2 (인증 임계 거리) |
 | `SEARCH_RADIUS_M` | O5 (이동수단 가정) |
 | `LLM_CANDIDATE_LIMIT`, `LLM_TIMEOUT_MS` | 토큰·지연 예산 |

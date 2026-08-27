@@ -9,8 +9,23 @@ export const SEOUL_WEST_BBOX = {
   maxLng: 126.97,
 } as const;
 
-/** 다트 좌표 기준 지역 후보를 찾는 반경 (O1) */
-export const DART_SEARCH_RADIUS_M = 5000;
+/**
+ * 여행 범위 단위별 상수 (O1).
+ * sampleRadiusM 이 좁으면 넓은 단위에서 후보가 한두 개로 줄고, 넓으면 엉뚱한 시·도까지 끌어온다.
+ * poiRadiusM 은 지역끼리 밀도를 견주는 자로만 쓰이므로 단위 안에서만 일관되면 된다.
+ */
+export const REGION_SCOPES = {
+  // 20000 은 Kakao 카테고리 검색의 최대 반경이다. 더 좁히면 표본이 바다·산에 떨어진 지역이
+  // POI 몇 개로 잡혀 순위가 뒤집힌다
+  광역: { sampleRadiusM: 60000, poiRadiusM: 20000 },
+  기초: { sampleRadiusM: 15000, poiRadiusM: 5000 },
+  읍면동: { sampleRadiusM: 5000, poiRadiusM: 1000 },
+} as const;
+
+export type RegionScope = keyof typeof REGION_SCOPES;
+
+/** 읍면동은 하루 여행에 너무 좁고 광역은 너무 넓다. 시·군·구를 기본으로 둔다 */
+export const DEFAULT_SCOPE: RegionScope = "기초";
 
 /** 거리가중치 감쇠의 반감기 — 이 거리마다 가중치가 절반이 된다 (O1) */
 export const DISTANCE_HALFLIFE_M = 2000;
@@ -23,9 +38,6 @@ export const MAX_REGION_CANDIDATES = 3;
 
 /** 지역 POI 밀도를 셀 때 세는 카테고리 — 관광명소·음식점·카페 (O1) */
 export const POI_CATEGORY_CODES = ["AT4", "FD6", "CE7"] as const;
-
-/** 지역 중심에서 POI 를 세는 반경. 지역끼리 상대 비교만 하므로 절댓값 자체는 의미가 없다 (O1) */
-export const POI_COUNT_RADIUS_M = 1000;
 
 /** 추천 후보를 찾는 반경. 이동수단 가정이 확정되면 바뀐다 (O5) */
 export const SEARCH_RADIUS_M = 2000;

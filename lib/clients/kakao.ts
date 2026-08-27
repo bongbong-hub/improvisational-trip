@@ -1,4 +1,5 @@
 // Kakao Local REST 래퍼. 서버에서만 import 한다 (SDD 1장) — REST 키가 번들에 실리면 안 된다.
+import type { RegionScope } from "../config.ts";
 import type { Point } from "../domain/geo.ts";
 
 const BASE = "https://dapi.kakao.com/v2/local";
@@ -21,34 +22,40 @@ async function get<T>(path: string, params: Record<string, string | number>): Pr
   return res.json() as Promise<T>;
 }
 
-export type KakaoRegion = { name: string; lat: number; lng: number };
-
 type RegionCodeResponse = {
   documents: {
     region_type: "B" | "H";
+    region_1depth_name: string;
     region_2depth_name: string;
     region_3depth_name: string;
-    x: string;
-    y: string;
   }[];
 };
 
 /**
- * 좌표를 행정동으로 바꾼다. region_type 이 B(법정동)/H(행정동) 둘 다 오므로 H 를 쓴다 —
+ * 좌표를 지역명으로 바꾼다. region_type 이 B(법정동)/H(행정동) 둘 다 오므로 H 를 쓴다 —
  * 사용자에게 보여줄 지역명은 행정동 쪽이 실제 생활권에 가깝다.
+ *
+ * 좌표는 돌려주지 않는다. 이 API 의 x·y 는 읍면동 좌표라 광역·기초 단위의 중심이 될 수 없어서,
+ * 호출부가 같은 이름으로 묶인 표본들의 평균을 중심으로 쓴다.
  */
-export async function coord2region(point: Point): Promise<KakaoRegion | null> {
+export async function coord2region(point: Point, scope: RegionScope): Promise<string | null> {
   const data = await get<RegionCodeResponse>("/geo/coord2regioncode.json", {
     x: point.lng,
     y: point.lat,
   });
   const doc = data.documents.find((d) => d.region_type === "H") ?? data.documents[0];
-  if (!doc || !doc.region_3depth_name) return null;
-  return {
-    name: `${doc.region_2depth_name} ${doc.region_3depth_name}`,
-    lat: Number(doc.y),
-    lng: Number(doc.x),
-  };
+  if (!doc) return null;
+
+  // 세종특별자치시처럼 시·군·구가 없는 곳은 윗 단위 이름만 남는다
+  const parts =
+    scope === "광역"
+      ? [doc.region_1depth_name]
+      : scope === "기초"
+        ? [doc.region_1depth_name, doc.region_2depth_name]
+        : [doc.region_2depth_name || doc.region_1depth_name, doc.region_3depth_name];
+
+  const name = parts.filter(Boolean).join(" ");
+  return name || null;
 }
 
 export type KakaoPlace = {
