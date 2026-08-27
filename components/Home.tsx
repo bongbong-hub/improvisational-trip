@@ -1,6 +1,6 @@
 "use client";
 
-import { SEOUL_WEST_BBOX } from "@/lib/config.ts";
+import { DEMO_BBOX } from "@/lib/config.ts";
 import { JEJU_PATH, MAINLAND_PATH, MAP_H, MAP_W, project } from "@/lib/domain/korea.ts";
 import type { StoredTrip } from "@/lib/storage/session-store.ts";
 
@@ -15,8 +15,8 @@ type Props = {
 };
 
 const target = project({
-  lat: (SEOUL_WEST_BBOX.minLat + SEOUL_WEST_BBOX.maxLat) / 2,
-  lng: (SEOUL_WEST_BBOX.minLng + SEOUL_WEST_BBOX.maxLng) / 2,
+  lat: (DEMO_BBOX.minLat + DEMO_BBOX.maxLat) / 2,
+  lng: (DEMO_BBOX.minLng + DEMO_BBOX.maxLng) / 2,
 });
 
 const dateLabel = (iso: string) =>

@@ -1,13 +1,22 @@
 // 튜닝 상수는 전부 여기 모은다. 호출부에 숫자를 직접 쓰지 않는다 (SDD 7장).
 // PRD 오픈 이슈로 남은 값들은 실제 API 응답을 보고 조정해야 한다 — 아래 주석의 O번호 참고.
 
-/** 데모 커버 범위: 서울 서부(마포·서대문·은평·강서)를 감싸는 근사 bounding box */
-export const SEOUL_WEST_BBOX = {
-  minLat: 37.52,
-  maxLat: 37.66,
-  minLng: 126.79,
-  maxLng: 126.97,
+/**
+ * 다트가 떨어지는 범위: 경기도와 그 안의 서울·인천을 감싸는 근사 bounding box.
+ * 사각형이라 서해와 접경지도 함께 들어온다 — 그런 자리에는 갈 만한 곳이 없어
+ * 후보가 비므로, 던지는 쪽에서 DART_MAX_TRIES 만큼 다시 던진다 (O4).
+ */
+export const DEMO_BBOX = {
+  minLat: 36.9,
+  maxLat: 38.3,
+  minLng: 126.3,
+  maxLng: 127.9,
 } as const;
+
+export const DEMO_AREA_LABEL = "경기·서울";
+
+/** 바다·접경지에 연달아 꽂혔을 때 포기하는 횟수. 사용자를 무한정 기다리게 두지 않는다 */
+export const DART_MAX_TRIES = 6;
 
 /**
  * 여행 범위 단위별 상수 (O1).

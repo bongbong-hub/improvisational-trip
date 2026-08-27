@@ -8,7 +8,14 @@ import { Menu, type Panel } from "@/components/Menu";
 import { MissionCard, Recommendations } from "@/components/Mission";
 import { Onboarding } from "@/components/Setup";
 import { Summary } from "@/components/Summary";
-import { DEFAULT_SCOPE, REGION_SCOPES, SEOUL_WEST_BBOX, type RegionScope } from "@/lib/config.ts";
+import {
+  DART_MAX_TRIES,
+  DEFAULT_SCOPE,
+  DEMO_AREA_LABEL,
+  DEMO_BBOX,
+  REGION_SCOPES,
+  type RegionScope,
+} from "@/lib/config.ts";
 import { randomPointInBbox, type Point } from "@/lib/domain/geo.ts";
 import type { Recommendation } from "@/lib/domain/recommend.ts";
 import {
@@ -133,23 +140,62 @@ export default function App() {
     }
   }
 
-  /** 다트로 뽑든 직접 찍든 여기서 만나 지역 후보를 가져온다 */
+  /**
+   * 지역 후보를 받아온다. 바다·접경지처럼 갈 만한 곳이 없는 자리면 null.
+   * 404 와 POI 가 전부 0 인 경우를 같이 묶는다 — 사용자에게는 둘 다 "빈 자리"다.
+   */
+  async function fetchRegions(point: Point, s: RegionScope): Promise<Region[] | null> {
+    const res = await fetch("/api/regions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dart: point, scope: s }),
+    });
+    const data = await res.json();
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(data.error ?? "지역을 불러오지 못했습니다.");
+    const found = data.regions as Region[];
+    return found.some((r) => r.poiCount > 0) ? found : null;
+  }
+
+  function acceptRegions(point: Point, found: Region[]) {
+    const started = commit({ phase: "dart" }, { dart_point: point, selected_region: null });
+    setRegions(found);
+    apply(started, { phase: "region_select" });
+  }
+
+  /** 직접 고르기. 찍은 자리가 비어 있으면 다른 곳을 고르라고 말한다 — 대신 골라주지 않는다 */
   async function loadRegions(point: Point, nextScope: RegionScope = scope) {
     setRegions([]);
     setPicked(null);
     setError(null);
     setLoading(true);
-    const started = commit({ phase: "dart" }, { dart_point: point, selected_region: null });
     try {
-      const res = await fetch("/api/regions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dart: point, scope: nextScope }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "지역을 불러오지 못했습니다.");
-      setRegions(data.regions);
-      apply(started, { phase: "region_select" });
+      const found = await fetchRegions(point, nextScope);
+      if (found) acceptRegions(point, found);
+      else setError("이 자리 주변에는 갈 만한 곳이 없습니다. 다른 곳을 골라주세요.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /** 다트. 서해나 접경지에 꽂히면 사용자를 세우지 않고 다시 던진다 (PRD O4) */
+  async function throwDart() {
+    setRegions([]);
+    setPicked(null);
+    setError(null);
+    setLoading(true);
+    try {
+      for (let i = 0; i < DART_MAX_TRIES; i++) {
+        const point = randomPointInBbox(DEMO_BBOX);
+        const found = await fetchRegions(point, scope);
+        if (found) {
+          acceptRegions(point, found);
+          return;
+        }
+      }
+      setError("바다와 산에만 꽂혔습니다. 한 번 더 던져주세요.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -441,7 +487,7 @@ export default function App() {
         {!origin && (
           <p className="sub">
             {mode === "dart"
-              ? "서울 서부 어딘가에 다트를 던져 여행할 지역을 뽑습니다."
+              ? `${DEMO_AREA_LABEL} 어딘가에 다트를 던져 여행할 지역을 뽑습니다.`
               : "지도를 눌러 찍거나 지역 이름으로 찾으세요."}
           </p>
         )}
@@ -499,7 +545,7 @@ export default function App() {
           mode === "dart" && (
             <button
               className="primary"
-              onClick={() => loadRegions(randomPointInBbox(SEOUL_WEST_BBOX))}
+              onClick={throwDart}
               disabled={loading}
             >
               {origin ? "다시 던지기" : "다트 던지기"}

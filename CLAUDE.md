@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 확정된 스택 (데모)
 
-Next.js(PWA) + API Routes / Kakao Map SDK·Local REST API / OpenRouter LLM / localStorage + IndexedDB(사진). 서버 DB 없음, 로그인 없음, 지역은 서울 서부만.
+Next.js(PWA) + API Routes / Kakao Local REST API / OpenRouter LLM / localStorage + IndexedDB(사진). 서버 DB 없음, 로그인 없음. 지도는 Kakao SDK 가 아니라 `lib/domain/korea.ts` 의 좌표로 직접 그린다 — 사용자가 확대·이동할 수 없어야 다트와 과녁이 성립한다. 다트는 경기·서울 bbox 안에 떨어지고, 직접 고르기는 전국이 열려 있다.
 
 ## 설계 제약
 

@@ -101,6 +101,7 @@ POST /api/geocode
 | Kakao API | 즉시 실패 노출. 후보가 없으면 추천 자체가 성립하지 않는다 |
 | LLM 호출·타임아웃(`config.LLM_TIMEOUT_MS`) | 거리순 상위 2개로 폴백, reason 은 템플릿 문장. 여행 루프가 끊기면 안 된다 |
 | LLM 응답이 후보에 없는 id 반환 | 폐기 후 위와 같은 폴백. 재시도하지 않는다 |
+| 다트가 바다·접경지에 꽂혀 후보가 빈다 | `DART_MAX_TRIES` 회까지 조용히 다시 던진다. 직접 고르기는 사용자 의도이므로 재시도 없이 안내만 한다 (O4) |
 
 ## 6. 저장
 
@@ -124,6 +125,7 @@ POST /api/geocode
 |---|---|
 | `DISTANCE_HALFLIFE_M`, `POI_CATEGORY_CODES` | O1 (밀도×거리 산식) |
 | `REGION_SCOPES` (단위별 표본·POI 반경) | O6 (범위 단위) |
+| `DEMO_BBOX`, `DART_MAX_TRIES` | O4 (빈 자리 재던지기) |
 | `VERIFY_THRESHOLD_M` | O2 (인증 임계 거리) |
 | `SEARCH_RADIUS_M` | O5 (이동수단 가정) |
 | `LLM_CANDIDATE_LIMIT`, `LLM_TIMEOUT_MS` | 토큰·지연 예산 |

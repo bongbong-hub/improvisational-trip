@@ -2,18 +2,24 @@
 
 import { useRef } from "react";
 
-import { SEOUL_WEST_BBOX } from "@/lib/config.ts";
+import { DEMO_AREA_LABEL, DEMO_BBOX } from "@/lib/config.ts";
 import type { Point } from "@/lib/domain/geo.ts";
 import { JEJU_PATH, MAINLAND_PATH, MAP_H, MAP_W, project, unproject } from "@/lib/domain/korea.ts";
 import type { RegionCandidate } from "@/lib/domain/scoring.ts";
 
 const target = {
-  topLeft: project({ lat: SEOUL_WEST_BBOX.maxLat, lng: SEOUL_WEST_BBOX.minLng }),
-  bottomRight: project({ lat: SEOUL_WEST_BBOX.minLat, lng: SEOUL_WEST_BBOX.maxLng }),
+  topLeft: project({ lat: DEMO_BBOX.maxLat, lng: DEMO_BBOX.minLng }),
+  bottomRight: project({ lat: DEMO_BBOX.minLat, lng: DEMO_BBOX.maxLng }),
   center: project({
-    lat: (SEOUL_WEST_BBOX.minLat + SEOUL_WEST_BBOX.maxLat) / 2,
-    lng: (SEOUL_WEST_BBOX.minLng + SEOUL_WEST_BBOX.maxLng) / 2,
+    lat: (DEMO_BBOX.minLat + DEMO_BBOX.maxLat) / 2,
+    lng: (DEMO_BBOX.minLng + DEMO_BBOX.maxLng) / 2,
   }),
+  get reach() {
+    return Math.max(
+      this.bottomRight.x - this.topLeft.x,
+      this.bottomRight.y - this.topLeft.y,
+    ) / 2;
+  },
 };
 
 type Props = {
@@ -64,8 +70,9 @@ export default function KoreaMap({
 
         {showTarget && (
           <g className="aim">
-            {[42, 29, 16].map((r) => (
-              <circle key={r} cx={target.center.x} cy={target.center.y} r={r} />
+            {/* 링은 범위 사각형을 감싸야 한다. bbox 가 바뀌면 반지름도 따라 움직인다 */}
+            {[1.45, 1.1, 0.78].map((k) => (
+              <circle key={k} cx={target.center.x} cy={target.center.y} r={target.reach * k} />
             ))}
             <rect
               className="aimBox"
@@ -74,8 +81,12 @@ export default function KoreaMap({
               width={target.bottomRight.x - target.topLeft.x}
               height={target.bottomRight.y - target.topLeft.y}
             />
-            <text className="aimLabel" x={target.center.x + 32} y={target.center.y + 3}>
-              서울 서부
+            <text
+              className="aimLabel"
+              x={target.center.x + target.reach * 1.6}
+              y={target.center.y + 3}
+            >
+              {DEMO_AREA_LABEL}
             </text>
           </g>
         )}
