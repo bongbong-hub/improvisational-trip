@@ -1,0 +1,304 @@
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html {
+  height: 100%;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+
+/* ── 앱 레이아웃 ─────────────────────────────── */
+
+.page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.mapWrap {
+  position: relative;
+  flex: 1;
+  min-height: 45vh;
+  background: #e8e8e8;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+.mapMsg {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* 다트는 지도 정중앙에 꽂힌다 — 좌표를 픽셀로 투영하지 않으려고 지도를 먼저 옮긴다 */
+.dart {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -100%;
+  font-size: 2rem;
+  pointer-events: none;
+}
+
+.dartDropping {
+  animation: drop 0.7s cubic-bezier(0.5, 0, 0.75, 0);
+}
+
+@keyframes drop {
+  from {
+    translate: -50% -100%;
+    transform: translateY(-60vh) scale(1.6);
+  }
+  to {
+    translate: -50% -100%;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.title {
+  font-size: 1.25rem;
+}
+
+.sub {
+  font-size: 0.88rem;
+  opacity: 0.7;
+}
+
+.error {
+  font-size: 0.88rem;
+  color: #c0392b;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  opacity: 0.8;
+}
+
+.slider input {
+  flex: 1;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.08);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.card span {
+  font-size: 0.8rem;
+  opacity: 0.65;
+}
+
+.cardOn {
+  border-color: currentColor;
+  background: rgba(128, 128, 128, 0.18);
+}
+
+.primary {
+  padding: 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--background);
+  background: var(--foreground);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── 설문·숙소 입력 ───────────────────────────── */
+
+.panelFull {
+  flex: 1;
+  overflow-y: auto;
+  border-top: none;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.choiceLabel {
+  font-size: 0.82rem;
+  opacity: 0.65;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  padding: 0.5rem 0.85rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.08);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chipOn {
+  color: var(--background);
+  background: var(--foreground);
+}
+
+.searchRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.08);
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 10px;
+}
+
+.secondary {
+  padding: 0.75rem 1rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.reason {
+  margin-top: 0.15rem;
+  line-height: 1.45;
+}
+
+/* ── 기록 정리 ───────────────────────────────── */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  list-style: none;
+}
+
+.shot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shot img {
+  width: 100%;
+  /* 세로 사진이 화면을 통째로 먹으면 타임라인이 안 보인다 */
+  max-height: 60vh;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.shotEmpty {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  font-size: 0.85rem;
+  opacity: 0.5;
+  background: rgba(128, 128, 128, 0.12);
+  border-radius: 12px;
+}
+
+.caption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.caption span:first-child {
+  font-weight: 600;
+}
+
+.caption span + span {
+  font-size: 0.78rem;
+  opacity: 0.6;
+}
