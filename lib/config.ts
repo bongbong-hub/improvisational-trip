@@ -51,6 +51,12 @@ export const POI_CATEGORY_CODES = ["AT4", "FD6", "CE7"] as const;
 /** 추천 후보를 찾는 반경. 이동수단 가정이 확정되면 바뀐다 (O5) */
 export const SEARCH_RADIUS_M = 2000;
 
+/**
+ * 위 반경 안이 비었을 때 한 번만 넓혀 보는 반경.
+ * 여행이 길어져 근처를 다 돌았거나, 지역 대표 좌표가 드물게 한적한 곳일 때를 위한 안전망이다.
+ */
+export const SEARCH_RADIUS_FALLBACK_M = 6000;
+
 /** 사진 인증 통과 거리. 실기기 GPS 오차 테스트 후 확정 (O2) */
 export const VERIFY_THRESHOLD_M = 200;
 

@@ -3,6 +3,7 @@ import { chatJson } from "@/lib/clients/llm.ts";
 import {
   LODGING_BIAS_COUNT,
   RECOMMEND_CATEGORY_CODES,
+  SEARCH_RADIUS_FALLBACK_M,
   SEARCH_RADIUS_M,
 } from "@/lib/config.ts";
 import type { Point } from "@/lib/domain/geo.ts";
@@ -36,22 +37,24 @@ export async function POST(request: Request) {
     return Response.json({ error: "region 과 current 좌표가 필요합니다." }, { status: 400 });
   }
 
-  let candidates;
-  try {
+  /** 한 반경에서 후보를 긁어 중복·방문지를 걷어낸다 */
+  const collect = async (radiusM: number) => {
     const nearby = await Promise.all(
-      RECOMMEND_CATEGORY_CODES.map((code) =>
-        searchNearby(body.current, SEARCH_RADIUS_M, code),
-      ),
+      RECOMMEND_CATEGORY_CODES.map((code) => searchNearby(body.current, radiusM, code)),
     );
     const lodging = body.accommodation
-      ? (await searchNearby(body.accommodation, SEARCH_RADIUS_M, "AT4")).slice(
-          0,
-          LODGING_BIAS_COUNT,
-        )
+      ? (await searchNearby(body.accommodation, radiusM, "AT4")).slice(0, LODGING_BIAS_COUNT)
       : [];
-    candidates = shortlist(dedupe([...nearby.flat(), ...lodging], body.exclude ?? []));
+    return shortlist(dedupe([...nearby.flat(), ...lodging], body.exclude ?? []));
+  };
+
+  let candidates;
+  try {
+    candidates = await collect(SEARCH_RADIUS_M);
+    // 근처를 다 돌았거나 한적한 곳이면 한 번만 넓혀 본다. 여행이 여기서 끊기면 안 된다
+    if (candidates.length === 0) candidates = await collect(SEARCH_RADIUS_FALLBACK_M);
   } catch (error) {
-    // 후보가 없으면 추천 자체가 성립하지 않는다. 폴백하지 않는다 (SDD 5장)
+    // Kakao 자체가 실패한 것은 폴백하지 않는다 (SDD 5장)
     return Response.json({ error: (error as Error).message }, { status: 502 });
   }
 

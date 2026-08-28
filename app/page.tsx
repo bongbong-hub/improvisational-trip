@@ -123,8 +123,10 @@ export default function App() {
         body: JSON.stringify({
           region,
           preferences: from.session.preferences,
-          // 첫 추천은 지역 중심이 아니라 찍은 지점에서 시작한다 — 광역 단위의 중심은 산속일 수도 있다
-          current: last ?? from.session.dart_point ?? region,
+          // 첫 추천은 사용자가 고른 지역에서 시작한다. 다트가 꽂힌 자리를 쓰면
+          // 바다·산에 떨어졌을 때 반경 안이 통째로 비어 추천이 실패한다 —
+          // 지역 대표 좌표는 POI 밀도로 뽑힌 곳이라 그런 일이 없다
+          current: last ?? region,
           history: done.map((m) => ({ name: m.place_name, category: m.category })),
           accommodation: from.session.accommodation,
           exclude: from.missions.map((m) => m.place_id),
