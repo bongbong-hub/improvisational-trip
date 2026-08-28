@@ -19,6 +19,14 @@ const target = project({
   lng: (DEMO_BBOX.minLng + DEMO_BBOX.maxLng) / 2,
 });
 
+/** 이어서 갈 여행이 어디까지 왔는지 한 줄로 */
+function activeLabel(trip: StoredTrip): string {
+  const region = trip.session.selected_region?.name;
+  const done = trip.missions.filter((m) => m.status === "완료").length;
+  if (!region) return "아직 지역을 안 정했습니다";
+  return done === 0 ? `${region} · 첫 미션 전` : `${region} · ${done}곳 방문`;
+}
+
 const dateLabel = (iso: string) =>
   new Date(iso).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" });
 
@@ -52,15 +60,18 @@ export function Home({
         <br />한 번에 한 곳씩, 도착해야 다음이 열립니다.
       </p>
 
-      {active ? (
+      {/* 가던 여행이 있으면 두 선택지를 함께 보여준다 — 이어서 갈지, 접고 새로 시작할지 */}
+      {active && (
         <button className="primary" onClick={onResume}>
           가던 여행 이어서
-        </button>
-      ) : (
-        <button className="primary" onClick={onStart}>
-          여행 시작
+          <span className="btnNote">{activeLabel(active)}</span>
         </button>
       )}
+
+      <button className={active ? "secondary" : "primary"} onClick={onStart}>
+        새 여행 시작
+        {active && <span className="btnNote">지금 여행은 여기서 접습니다</span>}
+      </button>
 
       <button className="secondary" onClick={onOpenWishlist}>
         위시리스트 {wishCount}곳

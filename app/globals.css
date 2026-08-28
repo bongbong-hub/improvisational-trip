@@ -677,3 +677,31 @@ button {
 .pin circle {
   fill: var(--board);
 }
+
+/* 버튼이 무엇을 하는지 한 줄로 덧붙일 때. 라벨과 같은 버튼 안에 둔다 */
+.btnNote {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.homeBtn {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+.homeBtn:hover {
+  color: var(--ivory);
+}
+
+.topbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}

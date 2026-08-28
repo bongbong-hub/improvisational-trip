@@ -29,6 +29,7 @@ import {
 import { scoreRegions, type Region } from "@/lib/domain/scoring.ts";
 import {
   archiveTrip,
+  clearTrip,
   loadHistory,
   loadTrip,
   saveHistory,
@@ -272,6 +273,15 @@ export default function App() {
           active={trip}
           wishCount={wishlist.length}
           onStart={() => {
+            // 가던 여행이 있으면 버리지 않고 기록으로 넘긴다. 단 한 곳도 못 간 여행은
+            // 목록만 어지럽히므로 그냥 접는다
+            if (trip) {
+              if (trip.missions.some((m) => m.status === "완료")) {
+                setHistory(archiveTrip(trip));
+              } else {
+                clearTrip();
+              }
+            }
             const started = freshTrip();
             saveTrip(started);
             setTrip(started);
@@ -319,13 +329,17 @@ export default function App() {
 
   const bar = (
     <div className="topbar">
-      {backable ? (
-        <button className="back" onClick={goBack}>
-          ← 뒤로
+      <div className="topbarLeft">
+        {backable && (
+          <button className="back" onClick={goBack}>
+            ← 뒤로
+          </button>
+        )}
+        {/* 홈은 메뉴 안에도 있지만, 하던 것을 접고 나가는 동작은 한 번에 닿아야 한다 */}
+        <button className="homeBtn" onClick={() => setAtHome(true)}>
+          홈
         </button>
-      ) : (
-        <span />
-      )}
+      </div>
       {menu}
     </div>
   );
