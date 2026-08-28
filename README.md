@@ -14,7 +14,8 @@ npm run lint
 npm run build
 ```
 
-포트는 3001 로 고정해 두었다. 지도는 외부 SDK 가 아니라 직접 그리므로 도메인 등록이 필요 없다.
+개발 서버만 3001 로 고정해 두었다. `npm start` 는 호스팅이 주는 `PORT` 를 따른다.
+지도는 외부 SDK 가 아니라 직접 그리므로 도메인 등록이 필요 없다.
 
 ## 환경 변수
 
@@ -22,13 +23,32 @@ npm run build
 
 | 키 | 사용처 |
 |---|---|
-| `KAKAO_REST_API_KEY` | 서버 전용. `lib/clients/kakao.ts` |
-| `OPENROUTER_API_KEY` | 서버 전용. `lib/clients/llm.ts` |
+| `KAKAO_REST_API_KEY` | `lib/clients/kakao.ts` |
+| `OPENROUTER_API_KEY` | `lib/clients/llm.ts` |
 | `OPENROUTER_MODEL_PROD` | 추천에 쓰는 모델. **기본값** |
 | `OPENROUTER_MODEL_DEMO` | 무료 라우팅. 응답이 17초쯤 걸려 타임아웃 폴백만 타므로 현재는 예비용 |
 
-서버 전용 키는 API Route 안에서만 읽는다. `NEXT_PUBLIC_` 없는 변수는 클라이언트 번들에 들어가지 않는다.
-브라우저로 나가는 키는 하나도 없다.
+넷 다 서버 전용이다. `NEXT_PUBLIC_` 접두사를 붙이면 클라이언트 번들에 실려 유출된다.
+
+## 배포
+
+**GitHub Pages 로는 배포할 수 없다.** 정적 파일만 서빙하는데 이 앱은 `/api/regions`,
+`/api/recommend`, `/api/geocode` 가 서버에서 돌아야 하고 거기서 키를 쓴다. 정적으로 내보내려면
+키를 브라우저로 옮겨야 하는데 저장소가 공개라 그대로 노출된다.
+
+Next.js 를 그대로 받는 곳에 올린다. Vercel 기준:
+
+1. https://vercel.com 에 GitHub 계정으로 로그인
+2. **Add New → Project** → 이 저장소 **Import**
+3. 프레임워크는 Next.js 로 자동 인식된다. 빌드 설정은 건드릴 것이 없다
+4. **Environment Variables** 에 위 표의 네 개를 등록 (Production·Preview 양쪽)
+5. **Deploy**
+
+이후 `main` 에 push 할 때마다 자동으로 다시 배포된다.
+
+Cloudflare Pages·Netlify 도 되지만 Next.js 어댑터 설정이 따로 필요하다.
+Node 를 그대로 돌리는 곳(Railway 등)이라면 `npm run build` 후 `npm start` 면 된다 —
+포트는 호스팅이 주는 `PORT` 를 따른다.
 
 ## 구현 상태
 
